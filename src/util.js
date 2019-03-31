@@ -80,7 +80,7 @@ class Util {
   static replaceRefInFormula(evaluatedValue, ref, value, default_value = 0) {
     return (evaluatedValue = evaluatedValue.replace(
       new RegExp(`\\b${ref}\\b`, "gi"),
-      value || default_value
+      `(${value || default_value})`
     ));
   }
 }

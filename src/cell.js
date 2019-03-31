@@ -2,11 +2,13 @@ import Util from "./util";
 import "./set_functions";
 
 class Cell {
-  constructor(spreadsheet, ref) {
-    // console.log(`Cell constructor called with ${arguments.length} arguments...`);
+  constructor(spreadsheet, refOrRowCol) {
+    const ref =
+      refOrRowCol instanceof Array ? Util.asRef(...refOrRowCol) : refOrRowCol;
 
+    // Alow cloning of (fully) empty cells.
     if (arguments.length === 0) {
-      return; // Alow cloning of (fully) empty cells.
+      return;
     }
 
     this.spreadsheet = spreadsheet;
@@ -51,8 +53,8 @@ class Cell {
     );
   }
 
-  setValue(newValue) {
-    if (newValue === this.value) {
+  setValue(newValue, directAndIndirectObservers = new Set()) {
+    if (String(newValue) === this.value) {
       return;
     }
 
@@ -63,14 +65,20 @@ class Cell {
       newValue = "[Cyclical Reference Error]";
     }
 
-    this.value = newValue;
+    this.value = String(newValue);
     this.refreshObservedCells();
-    this.evaluate();
+    this.evaluate(directAndIndirectObservers);
 
     this.touched = true;
   }
 
-  evaluate() {
+  evaluate(
+    directAndIndirectObservers,
+    visited = new Set(),
+    recalculateObservers = true
+  ) {
+    console.log(`Evaluating ${this.ref}...`);
+
     const previousCalculatedValue =
       this.calculatedValue === undefined ? this.value : this.calculatedValue;
     let evaluatedValue;
@@ -82,6 +90,15 @@ class Cell {
 
       this.observedCells.forEach(ref => {
         const observedCell = this.cellAt(ref);
+
+        // Observed cell with pending evaluation?
+        if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
+          console.log(`Evaluation of ${ref} pending!`);
+          // Evaluate it, but without recalculating its own obervers (which certalinly
+          // includes the current cell).
+          observedCell.evaluate(directAndIndirectObservers, visited, false);
+        }
+
         const observedCellCalculatedValue =
           observedCell && observedCell.calculatedValue;
 
@@ -104,13 +121,32 @@ class Cell {
 
     this.calculatedValue = evaluatedValue;
 
-    // console.log(`After evaluating ${this.ref}: was '${previousCalculatedValue}', became '${evaluatedValue}'`);
+    visited.add(this.ref);
+
+    console.log(`evaluate: ${this.ref} marked as visited.`);
+
+    console.log(
+      `After evaluating ${
+        this.ref
+      }: was '${previousCalculatedValue}', became '${evaluatedValue}'`
+    );
 
     if (evaluatedValue !== previousCalculatedValue) {
       this.recalculated = true;
       this.touched = true;
-      this.recalculateObservers();
+
+      if (recalculateObservers) {
+        this.recalculateObservers(directAndIndirectObservers, visited);
+      }
     }
+  }
+
+  recalculateObservers(directAndIndirectObservers, visited) {
+    this.observerCells.forEach(ref => {
+      if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
+        this.cellAt(ref).evaluate(directAndIndirectObservers, visited);
+      }
+    });
   }
 
   refreshObservedCells() {
@@ -150,12 +186,8 @@ class Cell {
     this.observerCells.delete(ref);
   }
 
-  recalculateObservers() {
-    this.observerCells.forEach(ref => this.cellAt(ref).evaluate());
-  }
-
-  cellAt(ref) {
-    return this.spreadsheet.cellAt(ref);
+  cellAt(refOrRowCol) {
+    return this.spreadsheet.cellAt(refOrRowCol);
   }
 }
 

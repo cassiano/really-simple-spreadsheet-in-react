@@ -9,6 +9,7 @@ class CellVisualizer extends React.Component {
     const cellInputs = $("#spreadsheet .cell");
     const currentCellIndex = cellInputs.index(event.target);
     let nextCellIndex;
+    const target = event.target;
 
     // console.log(pressedKey);
 
@@ -18,7 +19,7 @@ class CellVisualizer extends React.Component {
           (currentCellIndex + this.props.cols) % cellInputs.length;
         break;
       case 37: // Left
-        if (event.target.value === "") {
+        if (target.value === "") {
           nextCellIndex =
             (currentCellIndex - 1 + cellInputs.length) % cellInputs.length;
         }
@@ -39,7 +40,7 @@ class CellVisualizer extends React.Component {
         }
         break;
       case 39: // Right
-        if (event.target.value === "") {
+        if (target.value === "") {
           nextCellIndex = (currentCellIndex + 1) % cellInputs.length;
         }
         break;
@@ -60,7 +61,8 @@ class CellVisualizer extends React.Component {
         }
         break;
       case 27: // Esc
-        event.target.value = this.props.cell.value; // Restore previous value.
+        target.value = this.props.cell.value; // Restore previous value.
+        setTimeout(() => target.select(), 0);
         break;
       default:
         break;
@@ -88,6 +90,10 @@ class CellVisualizer extends React.Component {
           autoComplete="off"
           defaultValue={cell.value}
           onBlur={this.props.onBlur}
+          onFocus={event => {
+            const target = event.target;
+            setTimeout(() => target.select(), 0);
+          }}
           onKeyDown={this.handleKeyPress}
           name="value"
           ref="value"
