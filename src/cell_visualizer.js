@@ -100,7 +100,8 @@ class CellVisualizer extends React.Component {
           tabIndex={this.props.index}
           style={{
             borderColor: cell.touched ? "red" : "lightGray",
-            borderWidth: cell.touched ? 3 : 1
+            borderWidth: cell.touched ? 3 : 1,
+            display: this.props.editMode ? "block" : "none"
           }}
         />
         &nbsp;

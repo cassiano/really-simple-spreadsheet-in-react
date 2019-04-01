@@ -77,7 +77,7 @@ class Cell {
     visited = new Set(),
     recalculateObservers = true
   ) {
-    console.log(`Evaluating ${this.ref}...`);
+    // console.log(`Evaluating ${this.ref}...`);
 
     const previousCalculatedValue =
       this.calculatedValue === undefined ? this.value : this.calculatedValue;
@@ -93,7 +93,8 @@ class Cell {
 
         // Observed cell with pending evaluation?
         if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
-          console.log(`Evaluation of ${ref} pending!`);
+          // console.log(`Evaluation of ${ref} pending!`);
+          
           // Evaluate it, but without recalculating its own obervers (which certalinly
           // includes the current cell).
           observedCell.evaluate(directAndIndirectObservers, visited, false);
@@ -123,13 +124,13 @@ class Cell {
 
     visited.add(this.ref);
 
-    console.log(`evaluate: ${this.ref} marked as visited.`);
+    // console.log(`evaluate: ${this.ref} marked as visited.`);
 
-    console.log(
-      `After evaluating ${
-        this.ref
-      }: was '${previousCalculatedValue}', became '${evaluatedValue}'`
-    );
+    // console.log(
+    //   `After evaluating ${
+    //     this.ref
+    //   }: was '${previousCalculatedValue}', became '${evaluatedValue}'`
+    // );
 
     if (evaluatedValue !== previousCalculatedValue) {
       this.recalculated = true;

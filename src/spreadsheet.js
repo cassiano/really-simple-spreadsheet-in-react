@@ -21,6 +21,7 @@ class Spreadsheet extends React.Component {
       );
 
     this.state = {
+      editMode: true,
       cells: cells
     };
   }
@@ -40,13 +41,13 @@ class Spreadsheet extends React.Component {
       // );
 
       // Spiral with random references.
-      this.fillSpiral("A1", "E5", (index, ref, visitedCells) => {
+      this.fillSpiral("A1", "D8", (index, ref, visitedCells) => {
         if (index === 0) {
           return 1;
         } else {
           const refCellsSize = Math.min(
             1 + Math.floor(Math.random() * index),
-            20
+            Math.trunc(Math.sqrt(index))
           );
           const refCells = [...Array(refCellsSize)].map(
             () => visitedCells[Math.floor(Math.random() * visitedCells.length)]
@@ -63,6 +64,13 @@ class Spreadsheet extends React.Component {
         }
       });
 
+      // // Generalized "Fibonacci".
+      // const previousElementsToAdd = 20;
+
+      // this.fillSpiral("A1", "D100", (index, ref, visitedCells) =>
+      //   index < previousElementsToAdd ? 1 : '=' + [...Array(previousElementsToAdd)].map((_, i) => visitedCells[index - (i + 1)]).join('+')
+      // );
+
       return { cells: this.clonedCells };
     });
   }
@@ -75,14 +83,14 @@ class Spreadsheet extends React.Component {
       borderBottomRight
     );
 
-    for (col = borderTopLeftCol + 1; col < borderBottomRightCol; col++) {
+    for (let col = borderTopLeftCol + 1; col < borderBottomRightCol; col++) {
       this.cellAt([borderTopLeftRow, col], this.clonedCells).setValue("━━━━");
       this.cellAt([borderBottomRightRow, col], this.clonedCells).setValue(
         "━━━━"
       );
     }
 
-    for (row = borderTopLeftRow + 1; row < borderBottomRightRow; row++) {
+    for (let row = borderTopLeftRow + 1; row < borderBottomRightRow; row++) {
       this.cellAt([row, borderTopLeftCol], this.clonedCells).setValue("┃");
       this.cellAt([row, borderBottomRightCol], this.clonedCells).setValue("┃");
     }
@@ -274,9 +282,9 @@ class Spreadsheet extends React.Component {
         state.cells
       );
 
-      console.log(
-        `directAndIndirectObservers: ${[...directAndIndirectObservers]}`
-      );
+      // console.log(
+      //   `directAndIndirectObservers: ${[...directAndIndirectObservers]}`
+      // );
 
       const affectedCells = this.detectAffectedCells(
         state.cells,
@@ -285,7 +293,7 @@ class Spreadsheet extends React.Component {
         directAndIndirectObservers
       );
 
-      console.log(`affectedCells: ${[...affectedCells]}`);
+      // console.log(`affectedCells: ${[...affectedCells]}`);
 
       // Clone only previously recalculated, touched or (possibly) affected cells.
       this.clonedCells = state.cells.map(row =>
@@ -330,6 +338,7 @@ class Spreadsheet extends React.Component {
               rows={numRows}
               index={col + row * numCols + 1}
               onBlur={e => this.handleBlur(e, row, col)}
+              editMode={this.state.editMode}
             />
           </td>
         ))}
@@ -348,6 +357,14 @@ class Spreadsheet extends React.Component {
 
     return (
       <div>
+        <label>
+          Hide inputs
+          <input
+            type="checkbox"
+            checked={!this.state.editMode}
+            onChange={e => this.setState({ editMode: !e.target.checked })}
+          />
+        </label>
         <table id="spreadsheet" border="1" cellSpacing="0" cellPadding="2">
           <thead style={{ backgroundColor: "lightGray", fontWeight: "bold" }}>
             <tr>
