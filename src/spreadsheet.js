@@ -4,7 +4,6 @@ import Cell from "./cell";
 import CellVisualizer from "./cell_visualizer";
 import PropTypes from "prop-types";
 import "./set_functions";
-import findLastIndex from "ramda/es/findLastIndex";
 
 class Spreadsheet extends React.Component {
   static DEBUG = true;
@@ -12,7 +11,7 @@ class Spreadsheet extends React.Component {
   constructor(props) {
     super(props);
 
-    const cells = Array(props.initialRows)
+    const initialCells = Array(props.initialRows)
       .fill()
       .map((_, row) =>
         Array(props.initialCols)
@@ -22,13 +21,13 @@ class Spreadsheet extends React.Component {
 
     this.state = {
       editMode: true,
-      cells: cells
+      cells: initialCells
     };
   }
 
   componentDidMount() {
     this.setState(state => {
-      this.clonedCells = state.cells.map(row => row.map(cell => cell.clone()));
+      let clonedCells = state.cells.map(row => row.map(cell => cell.clone()));
 
       // // Spiral Fibonacci.
       // this.fillSpiral("A1", "E6", (index, ref, visitedCells) =>
@@ -41,41 +40,47 @@ class Spreadsheet extends React.Component {
       // );
 
       // Spiral with random references.
-      this.fillSpiral("A1", "D8", (index, ref, visitedCells) => {
-        if (index === 0) {
-          return 1;
-        } else {
-          const refCellsSize = Math.min(
-            1 + Math.floor(Math.random() * index),
-            Math.trunc(Math.sqrt(index))
-          );
-          const refCells = [...Array(refCellsSize)].map(
-            () => visitedCells[Math.floor(Math.random() * visitedCells.length)]
-          );
-          const randomMathOperation = () =>
-            ["+", "-"][Math.trunc(Math.random() * 2)];
+      this.fillSpiral({
+        borderTopLeft: "A1",
+        borderBottomRight: "D10",
+        cells: clonedCells,
+        valueFn: (index, ref, visitedCells) => {
+          if (index === 0) {
+            return 1;
+          } else {
+            const refCellsSize = Math.min(
+              1 + Math.floor(Math.random() * index),
+              Math.trunc(Math.sqrt(index))
+            );
+            const refCells = [...Array(refCellsSize)].map(
+              () =>
+                visitedCells[Math.floor(Math.random() * visitedCells.length)]
+            );
+            const randomMathOperation = () =>
+              ["+", "-"][Math.trunc(Math.random() * 2)];
 
-          const formula = refCells.reduce(
-            (acc, cell) => acc + `${randomMathOperation()}${cell}`,
-            `=${index + 1}`
-          );
+            const formula = refCells.reduce(
+              (acc, cell) => acc + `${randomMathOperation()}${cell}`,
+              `=${index + 1}`
+            );
 
-          return formula;
+            return formula;
+          }
         }
       });
 
       // // Generalized "Fibonacci".
       // const previousElementsToAdd = 20;
 
-      // this.fillSpiral("A1", "D100", (index, ref, visitedCells) =>
+      // this.fillSpiral({ borderTopLeft: "A1", borderBottomRight: "D100", cells: clonedCells, valueFn: (index, ref, visitedCells) =>
       //   index < previousElementsToAdd ? 1 : '=' + [...Array(previousElementsToAdd)].map((_, i) => visitedCells[index - (i + 1)]).join('+')
-      // );
+      // });
 
-      return { cells: this.clonedCells };
+      return { cells: clonedCells };
     });
   }
 
-  fillSpiral(borderTopLeft, borderBottomRight, valueFn) {
+  fillSpiral({ borderTopLeft, borderBottomRight, cells, valueFn }) {
     const [borderTopLeftRow, borderTopLeftCol] = Util.rowColFromRef(
       borderTopLeft
     );
@@ -84,27 +89,25 @@ class Spreadsheet extends React.Component {
     );
 
     for (let col = borderTopLeftCol + 1; col < borderBottomRightCol; col++) {
-      this.cellAt([borderTopLeftRow, col], this.clonedCells).setValue("━━━━");
-      this.cellAt([borderBottomRightRow, col], this.clonedCells).setValue(
-        "━━━━"
-      );
+      this.cellAt([borderTopLeftRow, col], cells).setValue("━━━━", cells);
+      this.cellAt([borderBottomRightRow, col], cells).setValue("━━━━", cells);
     }
 
     for (let row = borderTopLeftRow + 1; row < borderBottomRightRow; row++) {
-      this.cellAt([row, borderTopLeftCol], this.clonedCells).setValue("┃");
-      this.cellAt([row, borderBottomRightCol], this.clonedCells).setValue("┃");
+      this.cellAt([row, borderTopLeftCol], cells).setValue("┃", cells);
+      this.cellAt([row, borderBottomRightCol], cells).setValue("┃", cells);
     }
 
-    this.cellAt(borderTopLeft, this.clonedCells).setValue("┏");
-    this.cellAt(
-      [borderTopLeftRow, borderBottomRightCol],
-      this.clonedCells
-    ).setValue("┓");
-    this.cellAt(borderBottomRight, this.clonedCells).setValue("┛");
-    this.cellAt(
-      [borderBottomRightRow, borderTopLeftCol],
-      this.clonedCells
-    ).setValue("┗");
+    this.cellAt(borderTopLeft, cells).setValue("┏", cells);
+    this.cellAt([borderTopLeftRow, borderBottomRightCol], cells).setValue(
+      "┓",
+      cells
+    );
+    this.cellAt(borderBottomRight, cells).setValue("┛", cells);
+    this.cellAt([borderBottomRightRow, borderTopLeftCol], cells).setValue(
+      "┗",
+      cells
+    );
 
     const directions = {
       right: {
@@ -136,10 +139,7 @@ class Spreadsheet extends React.Component {
 
     let visitedCells = [];
     let direction = "down";
-    let cell = this.cellAt(
-      [borderTopLeftRow + 1, borderTopLeftCol + 1],
-      this.clonedCells
-    );
+    let cell = this.cellAt([borderTopLeftRow + 1, borderTopLeftCol + 1], cells);
     let nextCell, row, col, previousRow, previousCol;
     let index = 0;
 
@@ -150,7 +150,7 @@ class Spreadsheet extends React.Component {
         break;
       }
 
-      cell.setValue(valueFn(index, cell.ref, visitedCells));
+      cell.setValue(valueFn(index, cell.ref, visitedCells), cells);
 
       visitedCells = visitedCells.concat(cell.ref);
 
@@ -161,9 +161,7 @@ class Spreadsheet extends React.Component {
 
       // Did we reach the spreadsheet boundaries?
       nextCell =
-        row < 0 || col < 0
-          ? undefined
-          : this.cellAt([row, col], this.clonedCells);
+        row < 0 || col < 0 ? undefined : this.cellAt([row, col], cells);
 
       // Did we reach the border?
       if (nextCell && nextCell.value === "") {
@@ -173,36 +171,48 @@ class Spreadsheet extends React.Component {
         // Yes! Backup one step, turn right and walk again.
         direction = directions[direction].turn.left;
 
-        cell = this.cellAt(
-          walk(direction, previousRow, previousCol),
-          this.clonedCells
-        );
+        cell = this.cellAt(walk(direction, previousRow, previousCol), cells);
       }
 
       index++;
     }
   }
 
-  static rows(cells = this.clonedCells) {
+  static rows(cells) {
     return cells.length;
   }
 
-  static cols(cells = this.clonedCells) {
+  static cols(cells) {
     return Math.max(...cells.filter(row => Boolean).map(row => row.length)); // Ignore empty rows.
   }
 
-  cellAt(refOrRowCol, cells = this.clonedCells) {
+  cellExists(refOrRowCol, cells) {
     const [row, col] =
       refOrRowCol instanceof Array
         ? refOrRowCol
         : Util.rowColFromRef(refOrRowCol);
 
-    if (
-      row >= Spreadsheet.rows(cells) ||
-      col >= Spreadsheet.cols(cells) ||
-      !cells[row] ||
-      !cells[row][col]
-    ) {
+    return (
+      row < Spreadsheet.rows(cells) &&
+      col < Spreadsheet.cols(cells) &&
+      cells[row] &&
+      cells[row][col]
+    );
+  }
+
+  cellAt(refOrRowCol, cells) {
+    const [row, col] =
+      refOrRowCol instanceof Array
+        ? refOrRowCol
+        : Util.rowColFromRef(refOrRowCol);
+
+    if (!this.cellExists(refOrRowCol, cells)) {
+      console.assert(cells !== this.state.cells, {
+        message:
+          "cellAt: New cells should never be created directly in the state",
+        ref: refOrRowCol
+      });
+
       cells[row] = cells[row] || [];
       cells[row][col] = new Cell(this, [row, col]);
 
@@ -218,33 +228,24 @@ class Spreadsheet extends React.Component {
       }
     }
 
-    return cells[row][col];
+    return cells[row] && cells[row][col];
   }
 
-  detectAffectedCells(cells, currentCell, value, directAndIndirectObservers) {
-    if (currentCell.value === value) {
-      return new Set();
-    }
+  detectAffectedCells({ targetCell, newValue, globalObservers, cells }) {
+    let formulaRefs = Util.isFormula(newValue)
+      ? Util.findRefsInFormula(newValue)
+      : new Set();
+    let removedRefs = targetCell.observedCells.diff(formulaRefs);
 
-    let affectedCells = new Set([currentCell.ref]);
-    let formulaRefs = new Set();
-
-    if (Util.isFormula(value)) {
-      formulaRefs = Util.findRefsInFormula(value);
-    }
-
-    let removedRefs = currentCell.observedCells.diff(formulaRefs);
-
-    affectedCells.concat(formulaRefs);
-    affectedCells.concat(removedRefs);
-    affectedCells.concat(directAndIndirectObservers);
+    let affectedCells = new Set([targetCell.ref]); // Own cell is *always* affected, of course!
+    affectedCells.concat(formulaRefs); // All observed cells will be affected.
+    affectedCells.concat(removedRefs); // As will be all removed cells (from the formula).
+    affectedCells.concat(globalObservers); // And finally, all direct and indirect observers.
 
     return affectedCells;
   }
 
-  findDirectAndIndirectObservers(ref, cells, visited = new Set()) {
-    // console.log(`findDirectAndIndirectObservers: checking ${ref}...`);
-
+  findDirectAndIndirectObservers({ ref, cells, visited = new Set() }) {
     visited.add(ref);
 
     const observers = this.cellAt(ref, cells).observerCells;
@@ -258,7 +259,11 @@ class Spreadsheet extends React.Component {
         visited.has(ref2)
           ? acc
           : acc.concat(
-              this.findDirectAndIndirectObservers(ref2, cells, visited)
+              this.findDirectAndIndirectObservers({
+                ref: ref2,
+                cells: cells,
+                visited: visited
+              })
             ),
       new Set()
     );
@@ -269,34 +274,28 @@ class Spreadsheet extends React.Component {
   handleBlur(event, row, col) {
     const value = event.target.value;
 
-    // Keep current state if nothing changed.
-    if (this.state.cells[row][col].value === value) {
-      return;
-    }
-
     this.setState((state, props) => {
-      const currentCell = state.cells[row][col];
+      const currentCell = this.cellAt([row, col], state.cells);
 
-      const directAndIndirectObservers = this.findDirectAndIndirectObservers(
-        currentCell.ref,
-        state.cells
-      );
+      // Keep current state if nothing changed.
+      if (currentCell.value === value) {
+        return {};
+      }
 
-      // console.log(
-      //   `directAndIndirectObservers: ${[...directAndIndirectObservers]}`
-      // );
+      const directAndIndirectObservers = this.findDirectAndIndirectObservers({
+        ref: currentCell.ref,
+        cells: state.cells
+      });
 
-      const affectedCells = this.detectAffectedCells(
-        state.cells,
-        currentCell,
-        value,
-        directAndIndirectObservers
-      );
-
-      // console.log(`affectedCells: ${[...affectedCells]}`);
+      const affectedCells = this.detectAffectedCells({
+        targetCell: currentCell,
+        newValue: value,
+        globalObservers: directAndIndirectObservers,
+        cells: state.cells
+      });
 
       // Clone only previously recalculated, touched or (possibly) affected cells.
-      this.clonedCells = state.cells.map(row =>
+      let clonedCells = state.cells.map(row =>
         row.map(cell =>
           cell.recalculated || cell.touched || affectedCells.has(cell.ref)
             ? cell.clone({ recalculated: false, touched: false })
@@ -304,11 +303,15 @@ class Spreadsheet extends React.Component {
         )
       );
 
-      const currentClonedCell = this.clonedCells[row][col];
+      const currentClonedCell = clonedCells[row][col];
 
-      currentClonedCell.setValue(value, directAndIndirectObservers);
+      currentClonedCell.setValue(
+        value,
+        clonedCells,
+        directAndIndirectObservers
+      );
 
-      return { cells: this.clonedCells };
+      return { cells: clonedCells };
     });
   }
 
@@ -333,7 +336,7 @@ class Spreadsheet extends React.Component {
         {[...Array(numCols)].map((_, col) => (
           <td key={col}>
             <CellVisualizer
-              cell={this.state.cells[row][col]}
+              cell={this.cellAt([row, col], this.state.cells)}
               cols={numCols}
               rows={numRows}
               index={col + row * numCols + 1}
