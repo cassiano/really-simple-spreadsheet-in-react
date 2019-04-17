@@ -6,7 +6,8 @@ import PropTypes from "prop-types";
 import "./set_functions";
 
 class Spreadsheet extends React.Component {
-  static DEBUG = true;
+  static DISPLAY_STATE = true;
+  static CHECK_ASSERTIONS = true;
 
   constructor(props) {
     super(props);
@@ -21,6 +22,7 @@ class Spreadsheet extends React.Component {
 
     this.state = {
       editMode: true,
+      cellInputSize: 10,
       cells: initialCells
     };
   }
@@ -39,54 +41,226 @@ class Spreadsheet extends React.Component {
       //   index < 1 ? 1 : `=${index + 1}*${visitedCells[index - 1]}`
       // );
 
-      // Spiral with random references.
-      this.fillSpiral({
-        borderTopLeft: "A1",
-        borderBottomRight: "D10",
-        cells: clonedCells,
-        valueFn: (index, ref, visitedCells) => {
-          if (index === 0) {
-            return 1;
-          } else {
-            const refCellsSize = Math.min(
-              1 + Math.floor(Math.random() * index),
-              Math.trunc(Math.sqrt(index))
-            );
-            const refCells = [...Array(refCellsSize)].map(
-              () =>
-                visitedCells[Math.floor(Math.random() * visitedCells.length)]
-            );
-            const randomMathOperation = () =>
-              ["+", "-"][Math.trunc(Math.random() * 2)];
+      // // Spiral with random references.
+      // this.fillSpiral({
+      //   borderTopLeft: "A1",
+      //   borderBottomRight: "E30",
+      //   cells: clonedCells,
+      //   valueFn: (index, ref, visitedCells) => {
+      //     if (index === 0) {
+      //       return 1;
+      //     } else {
+      //       const refCellsSize = Math.min(
+      //         1 + Math.floor(Math.random() * index),
+      //         Math.trunc(Math.sqrt(index))
+      //       );
+      //       const refCells = [...Array(refCellsSize)].map(
+      //         () =>
+      //           visitedCells[Math.floor(Math.random() * visitedCells.length)]
+      //       );
+      //       const randomMathOperation = () =>
+      //         ["+", "-"][Math.trunc(Math.random() * 2)];
 
-            const formula = refCells.reduce(
-              (acc, cell) => acc + `${randomMathOperation()}${cell}`,
-              `=${index + 1}`
-            );
+      //       const formula = refCells.reduce(
+      //         (acc, cell) => acc + `${randomMathOperation()}${cell}`,
+      //         `=${index + 1}`
+      //       );
 
-            return formula;
-          }
-        }
-      });
+      //       return formula;
+      //     }
+      //   }
+      // });
 
       // // Generalized "Fibonacci".
-      // const previousElementsToAdd = 20;
+      // const previousElementsToAdd = 2;
 
-      // this.fillSpiral({ borderTopLeft: "A1", borderBottomRight: "D100", cells: clonedCells, valueFn: (index, ref, visitedCells) =>
-      //   index < previousElementsToAdd ? 1 : '=' + [...Array(previousElementsToAdd)].map((_, i) => visitedCells[index - (i + 1)]).join('+')
+      // this.fillSpiral({
+      //   borderTopLeft: "A1",
+      //   borderBottomRight: "H10",
+      //   cells: clonedCells,
+      //   valueFn: (index, ref, visitedCells) =>
+      //     index < previousElementsToAdd
+      //       ? 1
+      //       : "=" +
+      //         [...Array(previousElementsToAdd)]
+      //           .map((_, i) => visitedCells[index - (i + 1)])
+      //           .join("+")
       // });
+
+      // this.cellAt("A1", clonedCells).setValue(1, clonedCells);
+      // this.cellAt("A2", clonedCells).setValue(2, clonedCells);
+      // this.cellAt("A3", clonedCells).setValue(3, clonedCells);
+      // this.cellAt("A4", clonedCells).setValue(4, clonedCells);
+      // this.cellAt("A5", clonedCells).setValue("=A1+$A2+A$3+$A$4", clonedCells);
+      // this.copyCellToRange("A5", "A6:A10", clonedCells);
+      // this.copyRangeToRange("A1:A10", "B1:Z10", clonedCells);
+
+      // this.cellAt("A1", clonedCells).setValue(1, clonedCells);
+      // this.cellAt("A2", clonedCells).setValue(1, clonedCells);
+      // this.cellAt("A3", clonedCells).setValue("=A1+A2", clonedCells);
+      // this.copyCellToRange("A3", "A4:A10", clonedCells);
+      // this.copyRangeToRange("A1:A10", "B1:B10", clonedCells);
+
+      this.cellAt("A1", clonedCells).setValue(1, clonedCells);
+      this.cellAt("A2", clonedCells).setValue(2, clonedCells);
+      this.cellAt("A3", clonedCells).setValue(3, clonedCells);
+      this.cellAt("A4", clonedCells).setValue(4, clonedCells);
+      this.cellAt("B1", clonedCells).setValue(5, clonedCells);
+      this.cellAt("B2", clonedCells).setValue(6, clonedCells);
+      this.cellAt("B3", clonedCells).setValue(7, clonedCells);
+      this.cellAt("B4", clonedCells).setValue(8, clonedCells);
+      this.cellAt("A5", clonedCells).setValue("=SUM(A1:B4)", clonedCells);
+      this.cellAt("A6", clonedCells).setValue("=AVG(A1:B4)", clonedCells);
+      this.cellAt("A7", clonedCells).setValue("=MULT(A1:B4)", clonedCells);
+      this.cellAt("A8", clonedCells).setValue("=COUNT(A1:B4)", clonedCells);
+      this.cellAt("A9", clonedCells).setValue("=MAX(A1:B4)", clonedCells);
+      this.cellAt("A10", clonedCells).setValue("=MIN(A1:B4)", clonedCells);
+      this.cellAt("A11", clonedCells).setValue("=ROWS(A1:B4)", clonedCells);
+      this.cellAt("A12", clonedCells).setValue("=COLS(A1:B4)", clonedCells);
 
       return { cells: clonedCells };
     });
   }
 
+  // moveCell(fromRef, toRef, cells) {
+  //   const fromCell = this.cellAt(fromRef, cells);
+  //   const toCell = this.cellAt(toRef, cells);
+
+  //   fromCell.observers.forEach(ref => {
+  //     let observer = this.cellAt(ref, cells);
+
+  //     # TODO
+  //   });
+  // }
+
+  copyCell(fromRef, toRef, cells) {
+    const fromCell = this.cellAt(fromRef, cells);
+    const toCell = this.cellAt(toRef, cells);
+
+    if (Util.isFormula(fromCell.value)) {
+      let targetFormula = fromCell.value;
+
+      Util.findRefsInFormula(fromCell.value, false).forEach(ref => {
+        let targetRef = Util.addRowsColsToRef(
+          ref,
+          ...Util.refsDistance(fromRef, toRef)
+        );
+
+        // Include '<' and '>' markers around all replaced cell references, so they don't get replaced more than once.
+        targetFormula = targetFormula.replace(
+          new RegExp(
+            `(?<![a-zA-Z])(?<!<)${ref.replace("$", "[$]")}(?!>)(?!\d)`,
+            "gi"
+          ),
+          `<${targetRef}>`
+        );
+      });
+
+      // Now we get rid of the markers.
+      targetFormula = targetFormula.replace(/<(\$?[a-zA-Z]+\$?\d+)>/g, "$1");
+
+      toCell.setValue(targetFormula, cells);
+    } else {
+      toCell.setValue(fromCell.value, cells);
+    }
+  }
+
+  copyRangeToCell(fromRange, toRef, cells) {
+    // TODO
+  }
+
+  copyRangeToRange(fromRange, toRange, cells) {
+    const fromRangeCells = Util.expandRange(fromRange).flat();
+    const toRangeCells = Util.expandRange(toRange).flat();
+    const commonCells = new Set(fromRangeCells).intersection(
+      new Set(toRangeCells)
+    );
+
+    if (commonCells.size > 0) {
+      throw `copyRangeToRange: ranges cannot overlap (cells in common: ${[
+        ...commonCells
+      ]})`;
+    }
+
+    const refs = {
+      fromRange: fromRange.split(":"),
+      toRange: toRange.split(":")
+    };
+    const refsCoords = {
+      fromRange: {
+        topLeft: Util.rowColFromRef(refs.fromRange[0]),
+        bottomRight: Util.rowColFromRef(refs.fromRange[1])
+      },
+      toRange: {
+        topLeft: Util.rowColFromRef(refs.toRange[0]),
+        bottomRight: Util.rowColFromRef(refs.toRange[1])
+      }
+    };
+    const rowsWidth = {
+      fromRange:
+        refsCoords.fromRange.bottomRight.row -
+        refsCoords.fromRange.topLeft.row +
+        1,
+      toRange:
+        refsCoords.toRange.bottomRight.row - refsCoords.toRange.topLeft.row + 1
+    };
+    const colsWidth = {
+      fromRange:
+        refsCoords.fromRange.bottomRight.col -
+        refsCoords.fromRange.topLeft.col +
+        1,
+      toRange:
+        refsCoords.toRange.bottomRight.col - refsCoords.toRange.topLeft.col + 1
+    };
+
+    for (
+      let row = refsCoords.toRange.topLeft.row;
+      row <= refsCoords.toRange.bottomRight.row;
+      row += rowsWidth.fromRange
+    ) {
+      for (
+        let col = refsCoords.toRange.topLeft.col;
+        col <= refsCoords.toRange.bottomRight.col;
+        col += colsWidth.fromRange
+      ) {
+        const targetRangeBottomRightCoords = {
+          row: row + rowsWidth.fromRange - 1,
+          col: col + colsWidth.fromRange - 1
+        };
+
+        if (
+          targetRangeBottomRightCoords.row >
+            refsCoords.toRange.bottomRight.row ||
+          targetRangeBottomRightCoords.col > refsCoords.toRange.bottomRight.col
+        ) {
+          break; // Target shape wouldn't fit.
+        }
+
+        for (let innerRow = 0; innerRow < rowsWidth.fromRange; innerRow++) {
+          for (let innerCol = 0; innerCol < colsWidth.fromRange; innerCol++) {
+            this.copyCell(
+              Util.addRowsColsToRef(refs.fromRange[0], innerRow, innerCol),
+              Util.addRowsColsToRef(Util.asRef(row, col), innerRow, innerCol),
+              cells
+            );
+          }
+        }
+      }
+    }
+  }
+
+  copyCellToRange(fromRef, toRange, cells) {
+    this.copyRangeToRange([fromRef, fromRef].join(":"), toRange, cells);
+  }
+
   fillSpiral({ borderTopLeft, borderBottomRight, cells, valueFn }) {
-    const [borderTopLeftRow, borderTopLeftCol] = Util.rowColFromRef(
+    const { row: borderTopLeftRow, col: borderTopLeftCol } = Util.rowColFromRef(
       borderTopLeft
     );
-    const [borderBottomRightRow, borderBottomRightCol] = Util.rowColFromRef(
-      borderBottomRight
-    );
+    const {
+      row: borderBottomRightRow,
+      col: borderBottomRightCol
+    } = Util.rowColFromRef(borderBottomRight);
 
     for (let col = borderTopLeftCol + 1; col < borderBottomRightCol; col++) {
       this.cellAt([borderTopLeftRow, col], cells).setValue("━━━━", cells);
@@ -144,7 +318,7 @@ class Spreadsheet extends React.Component {
     let index = 0;
 
     while (true) {
-      [row, col] = Util.rowColFromRef(cell.ref);
+      ({ row, col } = Util.rowColFromRef(cell.ref));
 
       if (cell.value !== "") {
         break;
@@ -187,31 +361,35 @@ class Spreadsheet extends React.Component {
   }
 
   cellExists(refOrRowCol, cells) {
-    const [row, col] =
+    const { row, col } =
       refOrRowCol instanceof Array
-        ? refOrRowCol
+        ? { row: refOrRowCol[0], col: refOrRowCol[1] }
         : Util.rowColFromRef(refOrRowCol);
 
     return (
       row < Spreadsheet.rows(cells) &&
       col < Spreadsheet.cols(cells) &&
       cells[row] &&
-      cells[row][col]
+      cells[row][col] instanceof Cell
     );
   }
 
   cellAt(refOrRowCol, cells) {
-    const [row, col] =
+    const { row, col } =
       refOrRowCol instanceof Array
-        ? refOrRowCol
+        ? { row: refOrRowCol[0], col: refOrRowCol[1] }
         : Util.rowColFromRef(refOrRowCol);
 
     if (!this.cellExists(refOrRowCol, cells)) {
-      console.assert(cells !== this.state.cells, {
-        message:
-          "cellAt: New cells should never be created directly in the state",
-        ref: refOrRowCol
-      });
+      if (Spreadsheet.CHECK_ASSERTIONS) {
+        if (this.state && this.state.cells) {
+          console.assert(cells !== this.state.cells, {
+            message:
+              "cellAt: New cells should never be created directly in the state",
+            ref: refOrRowCol
+          });
+        }
+      }
 
       cells[row] = cells[row] || [];
       cells[row][col] = new Cell(this, [row, col]);
@@ -231,7 +409,12 @@ class Spreadsheet extends React.Component {
     return cells[row] && cells[row][col];
   }
 
-  detectAffectedCells({ targetCell, newValue, globalObservers, cells }) {
+  detectAffectedCells({ targetCell, newValue, cells }) {
+    const directAndIndirectObservers = this.findDirectAndIndirectObservers({
+      ref: targetCell.ref,
+      cells: cells
+    });
+
     let formulaRefs = Util.isFormula(newValue)
       ? Util.findRefsInFormula(newValue)
       : new Set();
@@ -240,7 +423,7 @@ class Spreadsheet extends React.Component {
     let affectedCells = new Set([targetCell.ref]); // Own cell is *always* affected, of course!
     affectedCells.concat(formulaRefs); // All observed cells will be affected.
     affectedCells.concat(removedRefs); // As will be all removed cells (from the formula).
-    affectedCells.concat(globalObservers); // And finally, all direct and indirect observers.
+    affectedCells.concat(directAndIndirectObservers); // And finally, all direct and indirect observers.
 
     return affectedCells;
   }
@@ -271,26 +454,20 @@ class Spreadsheet extends React.Component {
     return new Set(observers).concat(observersOfObservers);
   }
 
-  handleBlur(event, row, col) {
+  handleBlur(event, row, col, previousValue) {
     const value = event.target.value;
+
+    // Keep current state if nothing changed.
+    if (previousValue === value) {
+      return;
+    }
 
     this.setState((state, props) => {
       const currentCell = this.cellAt([row, col], state.cells);
 
-      // Keep current state if nothing changed.
-      if (currentCell.value === value) {
-        return {};
-      }
-
-      const directAndIndirectObservers = this.findDirectAndIndirectObservers({
-        ref: currentCell.ref,
-        cells: state.cells
-      });
-
       const affectedCells = this.detectAffectedCells({
         targetCell: currentCell,
         newValue: value,
-        globalObservers: directAndIndirectObservers,
         cells: state.cells
       });
 
@@ -305,11 +482,7 @@ class Spreadsheet extends React.Component {
 
       const currentClonedCell = clonedCells[row][col];
 
-      currentClonedCell.setValue(
-        value,
-        clonedCells,
-        directAndIndirectObservers
-      );
+      currentClonedCell.setValue(value, clonedCells);
 
       return { cells: clonedCells };
     });
@@ -340,8 +513,11 @@ class Spreadsheet extends React.Component {
               cols={numCols}
               rows={numRows}
               index={col + row * numCols + 1}
-              onBlur={e => this.handleBlur(e, row, col)}
+              onBlur={(e, previousValue) =>
+                this.handleBlur(e, row, col, previousValue)
+              }
               editMode={this.state.editMode}
+              inputSize={this.state.cellInputSize}
             />
           </td>
         ))}
@@ -350,7 +526,7 @@ class Spreadsheet extends React.Component {
 
     let currentStateInfo;
 
-    if (Spreadsheet.DEBUG) {
+    if (Spreadsheet.DISPLAY_STATE) {
       currentStateInfo = (
         <pre>
           Spreadsheet: {JSON.stringify(this.state, jsonStringifyReplacer, 2)}
@@ -361,13 +537,25 @@ class Spreadsheet extends React.Component {
     return (
       <div>
         <label>
-          Hide inputs
+          Hide inputs?
           <input
             type="checkbox"
             checked={!this.state.editMode}
             onChange={e => this.setState({ editMode: !e.target.checked })}
           />
         </label>
+        <br />
+        <label>
+          Cell input size:
+          <input
+            type="text"
+            size="3"
+            value={this.state.cellInputSize}
+            onChange={e => this.setState({ cellInputSize: e.target.value })}
+          />
+          <div id="slider" />
+        </label>
+        <hr />
         <table id="spreadsheet" border="1" cellSpacing="0" cellPadding="2">
           <thead style={{ backgroundColor: "lightGray", fontWeight: "bold" }}>
             <tr>

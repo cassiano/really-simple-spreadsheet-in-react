@@ -86,10 +86,10 @@ class CellVisualizer extends React.Component {
         <input
           type="text"
           className="cell"
-          size="7"
+          size={this.props.inputSize}
           autoComplete="off"
           defaultValue={cell.value}
-          onBlur={this.props.onBlur}
+          onBlur={event => this.props.onBlur(event, cell.value)}
           onFocus={event => {
             const target = event.target;
             setTimeout(() => target.select(), 0);

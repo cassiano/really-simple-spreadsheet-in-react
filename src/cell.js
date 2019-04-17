@@ -1,5 +1,6 @@
 import Util from "./util";
 import "./set_functions";
+import Spreadsheet from "./spreadsheet";
 
 class Cell {
   constructor(spreadsheet, refOrRowCol) {
@@ -14,11 +15,11 @@ class Cell {
     this.spreadsheet = spreadsheet;
     this.ref = ref;
     this.value = "";
+    this.calculatedValue = "";
     this.observedCells = new Set();
     this.observerCells = new Set();
     this.recalculated = false;
     this.touched = false;
-    this.evaluate();
   }
 
   clone(attrsToMerge = {}) {
@@ -37,24 +38,31 @@ class Cell {
     return clonedObject;
   }
 
-  directlyOrIndirectlyReferencedBy(refs, cells, visited = new Set()) {
+  directlyOrIndirectlyReferencedBy({ refs, cells, visited = new Set() }) {
     return (
       refs.size > 0 &&
       (refs.has(this.ref) ||
         [...refs].some(
           ref =>
             !visited.has(ref) &&
-            this.directlyOrIndirectlyReferencedBy(
-              this.cellAt(ref, cells).observedCells,
+            this.directlyOrIndirectlyReferencedBy({
+              refs: this.cellAt(ref, cells).observedCells,
               cells,
-              visited.add(ref)
-            )
+              visited: visited.add(ref)
+            })
         ))
     );
   }
 
-  setValue(newValue, cells, directAndIndirectObservers = new Set()) {
-    this.cellWillBeChanged("setValue", cells, { newValue: newValue });
+  setValue(newValue, cells) {
+    this.cellMightChange("setValue", cells, { newValue: newValue });
+
+    const directAndIndirectObservers = this.spreadsheet.findDirectAndIndirectObservers(
+      {
+        ref: this.ref,
+        cells
+      }
+    );
 
     if (String(newValue) === this.value) {
       return;
@@ -62,28 +70,42 @@ class Cell {
 
     if (
       Util.isFormula(newValue) &&
-      this.directlyOrIndirectlyReferencedBy(
-        Util.findRefsInFormula(newValue),
+      this.directlyOrIndirectlyReferencedBy({
+        refs: Util.findRefsInFormula(newValue),
         cells
-      )
+      })
     ) {
       newValue = "[Cyclical Reference Error]";
     }
 
     this.value = String(newValue);
-    this.refreshObservedCells(cells);
-    this.evaluate(directAndIndirectObservers, cells);
+    this.syncObservedCells(cells);
+    this.evaluate({ directAndIndirectObservers, cells });
 
     this.touched = true;
   }
 
-  evaluate(
+  getEvalContext() {
+    // All formula builtin functions go here.
+    const COUNT = refs => refs.flat().length;
+    const SUM = refs => refs.flat().reduce((ref, acc) => acc + ref);
+    const MULT = refs => refs.flat().reduce((ref, acc) => acc * ref);
+    const AVG = refs => SUM(refs) / COUNT(refs);
+    const MAX = refs => Math.max(...refs.flat());
+    const MIN = refs => Math.min(...refs.flat());
+    const ROWS = refs => refs.length;
+    const COLS = refs => (refs.length === 0 ? 0 : refs[0].length);
+
+    return code => eval(code);
+  }
+
+  evaluate({
     directAndIndirectObservers,
     cells,
     visited = new Set(),
     recalculateObservers = true
-  ) {
-    this.cellWillBeChanged("evaluate", cells);
+  }) {
+    this.cellMightChange("evaluate", cells);
 
     const previousCalculatedValue =
       this.calculatedValue === undefined ? this.value : this.calculatedValue;
@@ -94,6 +116,8 @@ class Cell {
         Util.extractFormulaContents(this.value)
       );
 
+      evaluatedValue = Util.expandAllRanges(evaluatedValue);
+
       this.observedCells.forEach(ref => {
         const observedCell = this.cellAt(ref, cells);
 
@@ -101,12 +125,12 @@ class Cell {
         if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
           // Evaluate it, but without recalculating its own obervers (which certalinly
           // includes the current cell).
-          observedCell.evaluate(
+          observedCell.evaluate({
             directAndIndirectObservers,
             cells,
             visited,
-            false
-          );
+            recalculateObservers: false
+          });
         }
 
         const observedCellCalculatedValue =
@@ -121,7 +145,7 @@ class Cell {
 
       try {
         // eslint-disable-next-line
-        evaluatedValue = eval(evaluatedValue);
+        evaluatedValue = this.getEvalContext()(evaluatedValue);
       } catch (error) {
         evaluatedValue = this.value;
       }
@@ -152,21 +176,24 @@ class Cell {
   recalculateObservers(directAndIndirectObservers, cells, visited) {
     this.observerCells.forEach(ref => {
       if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
-        this.cellAt(ref, cells).evaluate(
+        // Why not simply use `if (!visited.has(ref))`???
+        this.cellAt(ref, cells).evaluate({
           directAndIndirectObservers,
           cells,
           visited
-        );
+        });
       }
     });
   }
 
-  refreshObservedCells(cells) {
+  syncObservedCells(cells) {
     let previousObservedCells = new Set(this.observedCells); // Clone set, in order to compare/diff it later.
     let currentObservedCells = new Set();
 
     if (Util.isFormula(this.value)) {
-      currentObservedCells = Util.findRefsInFormula(this.value);
+      currentObservedCells = Util.findRefsInFormula(
+        Util.expandAllRanges(this.value)
+      );
       currentObservedCells.forEach(ref => this.addObservedCell(ref, cells));
     }
 
@@ -177,32 +204,32 @@ class Cell {
   }
 
   addObservedCell(ref, cells) {
-    this.cellWillBeChanged("addObservedCell", cells);
+    this.cellMightChange("addObservedCell", cells);
 
-    this.touched = true;
+    this.touched = this.touched || !this.observedCells.has(ref);
     this.observedCells.add(ref);
-    this.cellAt(ref, cells).addObserver(this.ref, cells);
+    this.cellAt(ref, cells).addObserverCell(this.ref, cells);
   }
 
   removeObservedCell(ref, cells) {
-    this.cellWillBeChanged("removeObservedCell", cells);
+    this.cellMightChange("removeObservedCell", cells);
 
-    this.touched = true;
+    this.touched = this.touched || this.observedCells.has(ref);
     this.observedCells.delete(ref);
-    this.cellAt(ref, cells).removeObserver(this.ref, cells);
+    this.cellAt(ref, cells).removeObserverCell(this.ref, cells);
   }
 
-  addObserver(ref, cells) {
-    this.cellWillBeChanged("addObserver", cells);
+  addObserverCell(ref, cells) {
+    this.cellMightChange("addObserverCell", cells);
 
-    this.touched = true;
+    this.touched = this.touched || !this.observerCells.has(ref);
     this.observerCells.add(ref);
   }
 
-  removeObserver(ref, cells) {
-    this.cellWillBeChanged("removeObserver", cells);
+  removeObserverCell(ref, cells) {
+    this.cellMightChange("removeObserverCell", cells);
 
-    this.touched = true;
+    this.touched = this.touched || this.observerCells.has(ref);
     this.observerCells.delete(ref);
   }
 
@@ -210,22 +237,23 @@ class Cell {
     return this.spreadsheet.cellAt(refOrRowCol, cells);
   }
 
-  cellWillBeChanged(caller, cells, attrs = {}) {
-    if (this.spreadsheet.state && this.spreadsheet.state.cells) {
-      console.assert(
-        cells !== this.spreadsheet.state.cells &&
-        (!this.spreadsheet.cellExists(
-          this.ref,
-          this.spreadsheet.state.cells
-        ) ||
-          this.cellAt(this.ref, this.spreadsheet.state.cells) !== this),
-        {
-          message:
-            `${caller}: Cells values should never be modified directly in the state`,
-          ref: this.ref,
-        ...attrs
-        }
-      );
+  cellMightChange(caller, cells, attrs = {}) {
+    if (Spreadsheet.CHECK_ASSERTIONS) {
+      if (this.spreadsheet.state && this.spreadsheet.state.cells) {
+        console.assert(
+          cells !== this.spreadsheet.state.cells &&
+            (!this.spreadsheet.cellExists(
+              this.ref,
+              this.spreadsheet.state.cells
+            ) ||
+              this.cellAt(this.ref, this.spreadsheet.state.cells) !== this),
+          {
+            message: `${caller}: Cells values should never be modified directly in the state`,
+            ref: this.ref,
+            ...attrs
+          }
+        );
+      }
     }
   }
 }
