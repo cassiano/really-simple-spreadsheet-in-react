@@ -6,7 +6,7 @@ import PropTypes from "prop-types";
 import "./set_functions";
 
 class Spreadsheet extends React.Component {
-  static DISPLAY_STATE = true;
+  static DISPLAY_STATE = false;
   static CHECK_ASSERTIONS = true;
 
   constructor(props) {
@@ -22,7 +22,7 @@ class Spreadsheet extends React.Component {
 
     this.state = {
       editMode: true,
-      cellInputSize: 10,
+      cellInputSize: 15,
       cells: initialCells
     };
   }
@@ -110,147 +110,29 @@ class Spreadsheet extends React.Component {
       this.cellAt("B3", clonedCells).setValue(7, clonedCells);
       this.cellAt("B4", clonedCells).setValue(8, clonedCells);
       this.cellAt("A5", clonedCells).setValue("=SUM(A1:B4)", clonedCells);
+      this.cellAt("B5", clonedCells).setValue("=SUM(A1, B4)", clonedCells);
       this.cellAt("A6", clonedCells).setValue("=AVG(A1:B4)", clonedCells);
       this.cellAt("A7", clonedCells).setValue("=MULT(A1:B4)", clonedCells);
       this.cellAt("A8", clonedCells).setValue("=COUNT(A1:B4)", clonedCells);
       this.cellAt("A9", clonedCells).setValue("=MAX(A1:B4)", clonedCells);
       this.cellAt("A10", clonedCells).setValue("=MIN(A1:B4)", clonedCells);
       this.cellAt("A11", clonedCells).setValue("=ROWS(A1:B4)", clonedCells);
-      this.cellAt("A12", clonedCells).setValue("=COLS(A1:B4)", clonedCells);
+      this.cellAt("A12", clonedCells).setValue("=COLS($A1:B$4)", clonedCells);
+      this.cellAt("A13", clonedCells).setValue(
+        "=IF(B5===9, 'Yes')",
+        clonedCells
+      );
+      this.cellAt("A14", clonedCells).setValue(
+        "=IF('A13'==='Yes', 1, -1)",
+        clonedCells
+      );
+      this.cellAt("A15", clonedCells).setValue(
+        "=IFNULLORZERO(B5, 'Any value...')",
+        clonedCells
+      );
 
       return { cells: clonedCells };
     });
-  }
-
-  // moveCell(fromRef, toRef, cells) {
-  //   const fromCell = this.cellAt(fromRef, cells);
-  //   const toCell = this.cellAt(toRef, cells);
-
-  //   fromCell.observers.forEach(ref => {
-  //     let observer = this.cellAt(ref, cells);
-
-  //     # TODO
-  //   });
-  // }
-
-  copyCell(fromRef, toRef, cells) {
-    const fromCell = this.cellAt(fromRef, cells);
-    const toCell = this.cellAt(toRef, cells);
-
-    if (Util.isFormula(fromCell.value)) {
-      let targetFormula = fromCell.value;
-
-      Util.findRefsInFormula(fromCell.value, false).forEach(ref => {
-        let targetRef = Util.addRowsColsToRef(
-          ref,
-          ...Util.refsDistance(fromRef, toRef)
-        );
-
-        // Include '<' and '>' markers around all replaced cell references, so they don't get replaced more than once.
-        targetFormula = targetFormula.replace(
-          new RegExp(
-            `(?<![a-zA-Z])(?<!<)${ref.replace("$", "[$]")}(?!>)(?!\d)`,
-            "gi"
-          ),
-          `<${targetRef}>`
-        );
-      });
-
-      // Now we get rid of the markers.
-      targetFormula = targetFormula.replace(/<(\$?[a-zA-Z]+\$?\d+)>/g, "$1");
-
-      toCell.setValue(targetFormula, cells);
-    } else {
-      toCell.setValue(fromCell.value, cells);
-    }
-  }
-
-  copyRangeToCell(fromRange, toRef, cells) {
-    // TODO
-  }
-
-  copyRangeToRange(fromRange, toRange, cells) {
-    const fromRangeCells = Util.expandRange(fromRange).flat();
-    const toRangeCells = Util.expandRange(toRange).flat();
-    const commonCells = new Set(fromRangeCells).intersection(
-      new Set(toRangeCells)
-    );
-
-    if (commonCells.size > 0) {
-      throw `copyRangeToRange: ranges cannot overlap (cells in common: ${[
-        ...commonCells
-      ]})`;
-    }
-
-    const refs = {
-      fromRange: fromRange.split(":"),
-      toRange: toRange.split(":")
-    };
-    const refsCoords = {
-      fromRange: {
-        topLeft: Util.rowColFromRef(refs.fromRange[0]),
-        bottomRight: Util.rowColFromRef(refs.fromRange[1])
-      },
-      toRange: {
-        topLeft: Util.rowColFromRef(refs.toRange[0]),
-        bottomRight: Util.rowColFromRef(refs.toRange[1])
-      }
-    };
-    const rowsWidth = {
-      fromRange:
-        refsCoords.fromRange.bottomRight.row -
-        refsCoords.fromRange.topLeft.row +
-        1,
-      toRange:
-        refsCoords.toRange.bottomRight.row - refsCoords.toRange.topLeft.row + 1
-    };
-    const colsWidth = {
-      fromRange:
-        refsCoords.fromRange.bottomRight.col -
-        refsCoords.fromRange.topLeft.col +
-        1,
-      toRange:
-        refsCoords.toRange.bottomRight.col - refsCoords.toRange.topLeft.col + 1
-    };
-
-    for (
-      let row = refsCoords.toRange.topLeft.row;
-      row <= refsCoords.toRange.bottomRight.row;
-      row += rowsWidth.fromRange
-    ) {
-      for (
-        let col = refsCoords.toRange.topLeft.col;
-        col <= refsCoords.toRange.bottomRight.col;
-        col += colsWidth.fromRange
-      ) {
-        const targetRangeBottomRightCoords = {
-          row: row + rowsWidth.fromRange - 1,
-          col: col + colsWidth.fromRange - 1
-        };
-
-        if (
-          targetRangeBottomRightCoords.row >
-            refsCoords.toRange.bottomRight.row ||
-          targetRangeBottomRightCoords.col > refsCoords.toRange.bottomRight.col
-        ) {
-          break; // Target shape wouldn't fit.
-        }
-
-        for (let innerRow = 0; innerRow < rowsWidth.fromRange; innerRow++) {
-          for (let innerCol = 0; innerCol < colsWidth.fromRange; innerCol++) {
-            this.copyCell(
-              Util.addRowsColsToRef(refs.fromRange[0], innerRow, innerCol),
-              Util.addRowsColsToRef(Util.asRef(row, col), innerRow, innerCol),
-              cells
-            );
-          }
-        }
-      }
-    }
-  }
-
-  copyCellToRange(fromRef, toRange, cells) {
-    this.copyRangeToRange([fromRef, fromRef].join(":"), toRange, cells);
   }
 
   fillSpiral({ borderTopLeft, borderBottomRight, cells, valueFn }) {
@@ -352,11 +234,170 @@ class Spreadsheet extends React.Component {
     }
   }
 
-  static rows(cells) {
+  // moveCell(fromRef, toRef, cells) {
+  //   const fromCell = this.cellAt(fromRef, cells);
+  //   const toCell = this.cellAt(toRef, cells);
+
+  //   fromCell.observers.forEach(ref => {
+  //     let observer = this.cellAt(ref, cells);
+
+  //     # TODO
+  //   });
+  // }
+
+  // TODO: refatorar comportamento na classe Util.
+  copyCell(fromRef, toRef, cells) {
+    const fromCell = this.cellAt(fromRef, cells);
+    const toCell = this.cellAt(toRef, cells);
+
+    if (Util.isFormula(fromCell.value)) {
+      let targetFormula = fromCell.value;
+
+      Util.findRefsInFormula({
+        formula: fromCell.value,
+        removeAbsoluteMarkers: false,
+        expandRanges: false
+      }).forEach(ref => {
+        let targetRef = Util.addRowsColsToRef(
+          ref,
+          ...Util.refsDistance(fromRef, toRef)
+        );
+
+        // Include '<' and '>' markers around all replaced cell references, so they don't get replaced more than once.
+        targetFormula = targetFormula.replace(
+          new RegExp(
+            `(?<![A-Z])(?<!<)${ref.replace("$", "[$]")}(?!>)(?!\\d)`,
+            "gi"
+          ),
+          `<${targetRef}>`
+        );
+      });
+
+      // Now we get rid of the markers.
+      targetFormula = targetFormula.replace(/<(\$?[A-Z]+\$?\d+)>/gi, "$1");
+
+      toCell.setValue(targetFormula, cells);
+    } else {
+      toCell.setValue(fromCell.value, cells);
+    }
+  }
+
+  copyRangeToRange(fromRange, toRange, cells) {
+    const fromRangeCells = Util.expandRange(fromRange).flat();
+    const toRangeCells = Util.expandRange(toRange).flat();
+    const commonCells = new Set(fromRangeCells).intersection(
+      new Set(toRangeCells)
+    );
+
+    if (commonCells.size > 0) {
+      /* eslint-disable no-throw-literal */
+      throw `copyRangeToRange: ranges cannot overlap (cells in common: ${[
+        ...commonCells
+      ]})`;
+      /* eslint-enable no-throw-literal */
+    }
+
+    const refs = {
+      fromRange: fromRange.split(":"),
+      toRange: toRange.split(":")
+    };
+    const refsCoords = {
+      fromRange: {
+        topLeft: Util.rowColFromRef(refs.fromRange[0]),
+        bottomRight: Util.rowColFromRef(refs.fromRange[1])
+      },
+      toRange: {
+        topLeft: Util.rowColFromRef(refs.toRange[0]),
+        bottomRight: Util.rowColFromRef(refs.toRange[1])
+      }
+    };
+    const rowsWidth = {
+      fromRange:
+        refsCoords.fromRange.bottomRight.row -
+        refsCoords.fromRange.topLeft.row +
+        1,
+      toRange:
+        refsCoords.toRange.bottomRight.row - refsCoords.toRange.topLeft.row + 1
+    };
+    const colsWidth = {
+      fromRange:
+        refsCoords.fromRange.bottomRight.col -
+        refsCoords.fromRange.topLeft.col +
+        1,
+      toRange:
+        refsCoords.toRange.bottomRight.col - refsCoords.toRange.topLeft.col + 1
+    };
+
+    for (
+      let row = refsCoords.toRange.topLeft.row;
+      row <= refsCoords.toRange.bottomRight.row;
+      row += rowsWidth.fromRange
+    ) {
+      for (
+        let col = refsCoords.toRange.topLeft.col;
+        col <= refsCoords.toRange.bottomRight.col;
+        col += colsWidth.fromRange
+      ) {
+        const targetRangeBottomRightCoords = {
+          row: row + rowsWidth.fromRange - 1,
+          col: col + colsWidth.fromRange - 1
+        };
+
+        if (
+          targetRangeBottomRightCoords.row >
+            refsCoords.toRange.bottomRight.row ||
+          targetRangeBottomRightCoords.col > refsCoords.toRange.bottomRight.col
+        ) {
+          break; // Target shape wouldn't fit.
+        }
+
+        for (let innerRow = 0; innerRow < rowsWidth.fromRange; innerRow++) {
+          for (let innerCol = 0; innerCol < colsWidth.fromRange; innerCol++) {
+            this.copyCell(
+              Util.addRowsColsToRef(refs.fromRange[0], innerRow, innerCol),
+              Util.addRowsColsToRef(Util.asRef(row, col), innerRow, innerCol),
+              cells
+            );
+          }
+        }
+      }
+    }
+  }
+
+  copyRangeToCell(fromRange, toRef, cells) {
+    const fromRangeRefs = fromRange.split(":");
+    const fromRangeRefsCoords = {
+      topLeft: Util.rowColFromRef(fromRangeRefs[0]),
+      bottomRight: Util.rowColFromRef(fromRangeRefs[1])
+    };
+    const fromRangeWidths = {
+      rows:
+        fromRangeRefsCoords.bottomRight.row -
+        fromRangeRefsCoords.topLeft.row +
+        1,
+      cols:
+        fromRangeRefsCoords.bottomRight.col -
+        fromRangeRefsCoords.topLeft.col +
+        1
+    };
+
+    const toRange = [
+      toRef,
+      Util.addRowsColsToRef(toRef, fromRangeWidths.rows, fromRangeWidths.cols)
+    ].join(":");
+
+    this.copyRangeToRange(fromRange, toRange, cells);
+  }
+
+  copyCellToRange(fromRef, toRange, cells) {
+    this.copyRangeToRange([fromRef, fromRef].join(":"), toRange, cells);
+  }
+
+  rows(cells) {
     return cells.length;
   }
 
-  static cols(cells) {
+  cols(cells) {
     return Math.max(...cells.filter(row => Boolean).map(row => row.length)); // Ignore empty rows.
   }
 
@@ -367,8 +408,8 @@ class Spreadsheet extends React.Component {
         : Util.rowColFromRef(refOrRowCol);
 
     return (
-      row < Spreadsheet.rows(cells) &&
-      col < Spreadsheet.cols(cells) &&
+      row < this.rows(cells) &&
+      col < this.cols(cells) &&
       cells[row] &&
       cells[row][col] instanceof Cell
     );
@@ -395,10 +436,10 @@ class Spreadsheet extends React.Component {
       cells[row][col] = new Cell(this, [row, col]);
 
       // Fill blank cells.
-      for (let r = 0; r < Spreadsheet.rows(cells); r++) {
+      for (let r = 0; r < this.rows(cells); r++) {
         cells[r] = cells[r] || [];
 
-        for (let c = 0; c < Spreadsheet.cols(cells); c++) {
+        for (let c = 0; c < this.cols(cells); c++) {
           if (!cells[r][c]) {
             cells[r][c] = new Cell(this, [r, c]);
           }
@@ -416,13 +457,14 @@ class Spreadsheet extends React.Component {
     });
 
     let formulaRefs = Util.isFormula(newValue)
-      ? Util.findRefsInFormula(newValue)
+      ? Util.findRefsInFormula({ formula: newValue })
       : new Set();
     let removedRefs = targetCell.observedCells.diff(formulaRefs);
+    let addedRefs = formulaRefs.diff(targetCell.observedCells);
 
-    let affectedCells = new Set([targetCell.ref]); // Own cell is *always* affected, of course!
-    affectedCells.concat(formulaRefs); // All observed cells will be affected.
-    affectedCells.concat(removedRefs); // As will be all removed cells (from the formula).
+    let affectedCells = new Set([targetCell.ref]); // Own cell is *always* affected...
+    affectedCells.concat(addedRefs); // All added/new cells...
+    affectedCells.concat(removedRefs); // All removed/old cells...
     affectedCells.concat(directAndIndirectObservers); // And finally, all direct and indirect observers.
 
     return affectedCells;
@@ -471,6 +513,8 @@ class Spreadsheet extends React.Component {
         cells: state.cells
       });
 
+      // console.log(`affectedCells: ${[...affectedCells]}`);
+
       // Clone only previously recalculated, touched or (possibly) affected cells.
       let clonedCells = state.cells.map(row =>
         row.map(cell =>
@@ -489,8 +533,8 @@ class Spreadsheet extends React.Component {
   }
 
   render() {
-    const numCols = Spreadsheet.cols(this.state.cells);
-    const numRows = Spreadsheet.rows(this.state.cells);
+    const numCols = this.cols(this.state.cells);
+    const numRows = this.rows(this.state.cells);
 
     const headerRow = [...Array(numCols)].map((_, col) => (
       <td key={col} align="center">

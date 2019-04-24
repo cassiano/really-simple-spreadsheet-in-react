@@ -57,6 +57,11 @@ class Cell {
   setValue(newValue, cells) {
     this.cellMightChange("setValue", cells, { newValue: newValue });
 
+    // Return immediatly if no changes.
+    if (String(newValue) === this.value) {
+      return;
+    }
+
     const directAndIndirectObservers = this.spreadsheet.findDirectAndIndirectObservers(
       {
         ref: this.ref,
@@ -64,14 +69,10 @@ class Cell {
       }
     );
 
-    if (String(newValue) === this.value) {
-      return;
-    }
-
     if (
       Util.isFormula(newValue) &&
       this.directlyOrIndirectlyReferencedBy({
-        refs: Util.findRefsInFormula(newValue),
+        refs: Util.findRefsInFormula({ formula: newValue }),
         cells
       })
     ) {
@@ -81,22 +82,27 @@ class Cell {
     this.value = String(newValue);
     this.syncObservedCells(cells);
     this.evaluate({ directAndIndirectObservers, cells });
-
-    this.touched = true;
   }
 
   getEvalContext() {
     // All formula builtin functions go here.
-    const COUNT = refs => refs.flat().length;
-    const SUM = refs => refs.flat().reduce((ref, acc) => acc + ref);
-    const MULT = refs => refs.flat().reduce((ref, acc) => acc * ref);
-    const AVG = refs => SUM(refs) / COUNT(refs);
-    const MAX = refs => Math.max(...refs.flat());
-    const MIN = refs => Math.min(...refs.flat());
-    const ROWS = refs => refs.length;
-    const COLS = refs => (refs.length === 0 ? 0 : refs[0].length);
+    /* eslint-disable no-unused-vars */
+    const COUNT = (...cells) => cells.flat(2).length;
+    const SUM = (...cells) => cells.flat(2).reduce((cell, acc) => acc + cell);
+    const MULT = (...cells) => cells.flat(2).reduce((cell, acc) => acc * cell);
+    const AVG = (...cells) => SUM(...cells) / COUNT(...cells);
+    const MAX = (...cells) => Math.max(...cells.flat(2));
+    const MIN = (...cells) => Math.min(...cells.flat(2));
+    const ROWS = (...cells) => cells[0].length;
+    const COLS = (...cells) => (cells[0].length === 0 ? 0 : cells[0][0].length);
+    const IF = (condition, thenExpr, elseExpr = "") =>
+      condition ? thenExpr : elseExpr;
+    const NULLIF = (cell1, cell2) => (cell1 === cell2 ? "" : cell1);
+    const IFNULLORZERO = (cell, defaultValue) =>
+      cell === "" || cell === 0 ? defaultValue : cell;
+    /* eslint-enable no-unused-vars */
 
-    return code => eval(code);
+    return code => eval(code); // eslint-disable-line no-eval
   }
 
   evaluate({
@@ -112,19 +118,15 @@ class Cell {
     let evaluatedValue;
 
     if (Util.isFormula(this.value)) {
-      evaluatedValue = Util.removeAbsoluteReferences(
-        Util.extractFormulaContents(this.value)
-      );
-
-      evaluatedValue = Util.expandAllRanges(evaluatedValue);
+      evaluatedValue = Util.removeAbsoluteReferences(this.value);
+      evaluatedValue = Util.expandRanges(evaluatedValue);
 
       this.observedCells.forEach(ref => {
         const observedCell = this.cellAt(ref, cells);
 
-        // Observed cell with pending evaluation?
+        // Is this cell (pointed to by `ref`) subject to change and is pending evaluation?
         if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
-          // Evaluate it, but without recalculating its own obervers (which certalinly
-          // includes the current cell).
+          // Evaluate it, but without recalculating its own observers (which certalinly includes the current cell).
           observedCell.evaluate({
             directAndIndirectObservers,
             cells,
@@ -133,19 +135,19 @@ class Cell {
           });
         }
 
-        const observedCellCalculatedValue =
-          observedCell && observedCell.calculatedValue;
-
         evaluatedValue = Util.replaceRefInFormula(
           evaluatedValue,
           ref,
-          observedCellCalculatedValue
+          observedCell.calculatedValue
         );
       });
 
       try {
-        // eslint-disable-next-line
-        evaluatedValue = this.getEvalContext()(evaluatedValue);
+        // console.log(evaluatedValue);
+
+        evaluatedValue = this.getEvalContext()(
+          Util.extractFormulaContents(evaluatedValue)
+        );
       } catch (error) {
         evaluatedValue = this.value;
       }
@@ -157,15 +159,10 @@ class Cell {
 
     visited.add(this.ref);
 
-    // console.log(
-    //   `After evaluating ${
-    //     this.ref
-    //   }: was '${previousCalculatedValue}', became '${evaluatedValue}'`
-    // );
+    // console.log(`After evaluating ${this.ref}: was '${previousCalculatedValue}', became '${evaluatedValue}'`);
 
-    if (evaluatedValue !== previousCalculatedValue) {
+    if (String(evaluatedValue) !== String(previousCalculatedValue)) {
       this.recalculated = true;
-      this.touched = true;
 
       if (recalculateObservers) {
         this.recalculateObservers(directAndIndirectObservers, cells, visited);
@@ -176,7 +173,6 @@ class Cell {
   recalculateObservers(directAndIndirectObservers, cells, visited) {
     this.observerCells.forEach(ref => {
       if (directAndIndirectObservers.has(ref) && !visited.has(ref)) {
-        // Why not simply use `if (!visited.has(ref))`???
         this.cellAt(ref, cells).evaluate({
           directAndIndirectObservers,
           cells,
@@ -191,10 +187,11 @@ class Cell {
     let currentObservedCells = new Set();
 
     if (Util.isFormula(this.value)) {
-      currentObservedCells = Util.findRefsInFormula(
-        Util.expandAllRanges(this.value)
-      );
-      currentObservedCells.forEach(ref => this.addObservedCell(ref, cells));
+      currentObservedCells = Util.findRefsInFormula({ formula: this.value });
+      
+      const newCells = currentObservedCells.diff(previousObservedCells);
+
+      newCells.forEach(ref => this.addObservedCell(ref, cells));
     }
 
     // Remove unreferenced cells.

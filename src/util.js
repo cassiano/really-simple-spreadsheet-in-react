@@ -55,7 +55,7 @@ class Util {
   }
 
   static rowColFromRef(ref) {
-    const match = ref.match(/^([$]?)([A-Z]+)([$]?)(\d+)$/i);
+    const match = ref.toUpperCase().match(/^([$]?)([A-Z]+)([$]?)(\d+)$/i);
     const absoluteCol = match[1] === "$";
     const col = Util.colIndexFromRef(match[2]);
     const absoluteRow = match[3] === "$";
@@ -90,12 +90,19 @@ class Util {
     return formula.slice(1);
   }
 
-  static findRefsInFormula(formula, removeAbsoluteMarkers = true) {
+  static findRefsInFormula({
+    formula,
+    removeAbsoluteMarkers = true,
+    expandRanges = true
+  }) {
+    const updatedFormula = expandRanges ? Util.expandRanges(formula) : formula;
+
     return new Set(
-      (formula.toUpperCase().match(/[$]?[A-Z]+[$]?\d+\b/gi) || []).map(ref =>
-        removeAbsoluteMarkers
-          ? ref.replace(/[$]?([A-Z]+)[$]?(\d+)\b/gi, "$1$2")
-          : ref
+      (updatedFormula.toUpperCase().match(/[$]?[A-Z]+[$]?\d+\b/gi) || []).map(
+        ref =>
+          removeAbsoluteMarkers
+            ? ref.replace(/[$]?([A-Z]+)[$]?(\d+)\b/gi, "$1$2")
+            : ref
       )
     );
   }
@@ -104,17 +111,44 @@ class Util {
     return formula.replace(/[$]?([A-Z]+)[$]?(\d+)\b/gi, "$1$2");
   }
 
-  static expandAllRanges(formula) {
+  static expandRanges(formula) {
     return formula.replace(
       /[$]?([A-Z]+)[$]?(\d+):[$]?([A-Z]+)[$]?(\d+)\b/gi,
       range => JSON.stringify(Util.expandRange(range)).replace(/"/g, "")
     );
   }
 
-  static replaceRefInFormula(evaluatedValue, ref, value, default_value = 0) {
+  static replaceRefInFormula(
+    evaluatedValue,
+    ref,
+    value,
+    defaultNumericalValue = 0
+  ) {
+    let updatedValue;
+
+    switch (typeof value) {
+      case "string":
+        // Is it actually an integer or floating point number represented as a string?
+        if (value.match(/^-?\d+([.]\d*)?$/)) {
+          updatedValue = Number(value);
+        } else {
+          updatedValue = value || defaultNumericalValue;
+        }
+        break;
+      case "number":
+        updatedValue = value;
+        break;
+      default:
+        updatedValue = value || defaultNumericalValue;
+    }
+
     return evaluatedValue.replace(
       new RegExp(`\\b${ref}\\b`, "gi"),
-      `(${value || default_value})`
+      typeof updatedValue === "string"
+        ? updatedValue
+        : updatedValue < 0
+        ? `(${updatedValue})`
+        : updatedValue
     );
   }
 
