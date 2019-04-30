@@ -6,7 +6,6 @@ import PropTypes from "prop-types";
 import "./set_functions";
 
 class Spreadsheet extends React.Component {
-  static DISPLAY_STATE = false;
   static CHECK_ASSERTIONS = true;
 
   constructor(props) {
@@ -21,6 +20,8 @@ class Spreadsheet extends React.Component {
       );
 
     this.state = {
+      showState: false,
+      stateCellsFilter: "",
       editMode: true,
       cellInputSize: 15,
       cells: initialCells
@@ -101,48 +102,43 @@ class Spreadsheet extends React.Component {
       // this.copyCellToRange("A3", "A4:A10", clonedCells);
       // this.copyRangeToRange("A1:A10", "B1:B10", clonedCells);
 
-      this.cellAt("A1", clonedCells).setValue(1, clonedCells);
-      this.cellAt("A2", clonedCells).setValue(2, clonedCells);
-      this.cellAt("A3", clonedCells).setValue(3, clonedCells);
-      this.cellAt("A4", clonedCells).setValue(4, clonedCells);
-      this.cellAt("B1", clonedCells).setValue(5, clonedCells);
-      this.cellAt("B2", clonedCells).setValue(6, clonedCells);
-      this.cellAt("B3", clonedCells).setValue(7, clonedCells);
-      this.cellAt("B4", clonedCells).setValue(8, clonedCells);
-      this.cellAt("A5", clonedCells).setValue("=SUM(A1:B4)", clonedCells);
-      this.cellAt("B5", clonedCells).setValue("=SUM(A1, B4)", clonedCells);
-      this.cellAt("A6", clonedCells).setValue("=AVG(A1:B4)", clonedCells);
-      this.cellAt("A7", clonedCells).setValue("=MULT(A1:B4)", clonedCells);
-      this.cellAt("A8", clonedCells).setValue("=COUNT(A1:B4)", clonedCells);
-      this.cellAt("A9", clonedCells).setValue("=MAX(A1:B4)", clonedCells);
-      this.cellAt("A10", clonedCells).setValue("=MIN(A1:B4)", clonedCells);
-      this.cellAt("A11", clonedCells).setValue("=ROWS(A1:B4)", clonedCells);
-      this.cellAt("A12", clonedCells).setValue("=COLS($A1:B$4)", clonedCells);
-      this.cellAt("A13", clonedCells).setValue(
-        "=IF(B5===9, 'Yes')",
-        clonedCells
-      );
-      this.cellAt("A14", clonedCells).setValue(
-        "=IF('A13'==='Yes', 1, -1)",
-        clonedCells
-      );
-      this.cellAt("A15", clonedCells).setValue(
-        "=IFNULLORZERO(B5, 'Any value...')",
-        clonedCells
-      );
+      // this.cellAt("A1", clonedCells).setValue(1, clonedCells);
+      // this.cellAt("A2", clonedCells).setValue(2, clonedCells);
+      // this.cellAt("A3", clonedCells).setValue(3, clonedCells);
+      // this.cellAt("A4", clonedCells).setValue(4, clonedCells);
+      // this.cellAt("B1", clonedCells).setValue(5, clonedCells);
+      // this.cellAt("B2", clonedCells).setValue(6, clonedCells);
+      // this.cellAt("B3", clonedCells).setValue(7, clonedCells);
+      // this.cellAt("B4", clonedCells).setValue(8, clonedCells);
+      // this.cellAt("A5", clonedCells).setValue("=SUM(A1:B4)", clonedCells);
+      // this.cellAt("B5", clonedCells).setValue("=SUM(A1, B4)", clonedCells);
+      // this.cellAt("A6", clonedCells).setValue("=AVG(A1:B4)", clonedCells);
+      // this.cellAt("A7", clonedCells).setValue("=MULT(A1:B4)", clonedCells);
+      // this.cellAt("A8", clonedCells).setValue("=COUNT(A1:B4)", clonedCells);
+      // this.cellAt("A9", clonedCells).setValue("=MAX(A1:B4)", clonedCells);
+      // this.cellAt("A10", clonedCells).setValue("=MIN(A1:B4)", clonedCells);
+      // this.cellAt("A11", clonedCells).setValue("=ROWS(A1:B4)", clonedCells);
+      // this.cellAt("A12", clonedCells).setValue("=COLS($A1:B$4)", clonedCells);
+      // this.cellAt("A13", clonedCells).setValue(
+      //   "=IF(B5===9, 'Yes')",
+      //   clonedCells
+      // );
+      // this.cellAt("A14", clonedCells).setValue(
+      //   "=IF('A13'==='Yes', 1, -1)",
+      //   clonedCells
+      // );
+      // this.cellAt("A15", clonedCells).setValue(
+      //   "=IFNULLORZERO(B5, 'Any value...')",
+      //   clonedCells
+      // );
 
       return { cells: clonedCells };
     });
   }
 
   fillSpiral({ borderTopLeft, borderBottomRight, cells, valueFn }) {
-    const { row: borderTopLeftRow, col: borderTopLeftCol } = Util.rowColFromRef(
-      borderTopLeft
-    );
-    const {
-      row: borderBottomRightRow,
-      col: borderBottomRightCol
-    } = Util.rowColFromRef(borderBottomRight);
+    const { row: borderTopLeftRow, col: borderTopLeftCol } = Util.rowColFromRef(borderTopLeft);
+    const { row: borderBottomRightRow, col: borderBottomRightCol } = Util.rowColFromRef(borderBottomRight);
 
     for (let col = borderTopLeftCol + 1; col < borderBottomRightCol; col++) {
       this.cellAt([borderTopLeftRow, col], cells).setValue("━━━━", cells);
@@ -155,15 +151,9 @@ class Spreadsheet extends React.Component {
     }
 
     this.cellAt(borderTopLeft, cells).setValue("┏", cells);
-    this.cellAt([borderTopLeftRow, borderBottomRightCol], cells).setValue(
-      "┓",
-      cells
-    );
+    this.cellAt([borderTopLeftRow, borderBottomRightCol], cells).setValue("┓", cells);
     this.cellAt(borderBottomRight, cells).setValue("┛", cells);
-    this.cellAt([borderBottomRightRow, borderTopLeftCol], cells).setValue(
-      "┗",
-      cells
-    );
+    this.cellAt([borderBottomRightRow, borderTopLeftCol], cells).setValue("┗", cells);
 
     const directions = {
       right: {
@@ -188,10 +178,7 @@ class Spreadsheet extends React.Component {
       }
     };
 
-    const walk = (direction, row, col) => [
-      directions[direction].row(row),
-      directions[direction].col(col)
-    ];
+    const walk = (direction, row, col) => [directions[direction].row(row), directions[direction].col(col)];
 
     let visitedCells = [];
     let direction = "down";
@@ -216,8 +203,7 @@ class Spreadsheet extends React.Component {
       [row, col] = walk(direction, row, col);
 
       // Did we reach the spreadsheet boundaries?
-      nextCell =
-        row < 0 || col < 0 ? undefined : this.cellAt([row, col], cells);
+      nextCell = row < 0 || col < 0 ? undefined : this.cellAt([row, col], cells);
 
       // Did we reach the border?
       if (nextCell && nextCell.value === "") {
@@ -258,17 +244,11 @@ class Spreadsheet extends React.Component {
         removeAbsoluteMarkers: false,
         expandRanges: false
       }).forEach(ref => {
-        let targetRef = Util.addRowsColsToRef(
-          ref,
-          ...Util.refsDistance(fromRef, toRef)
-        );
+        let targetRef = Util.addRowsColsToRef(ref, ...Util.refsDistance(fromRef, toRef));
 
         // Include '<' and '>' markers around all replaced cell references, so they don't get replaced more than once.
         targetFormula = targetFormula.replace(
-          new RegExp(
-            `(?<![A-Z])(?<!<)${ref.replace("$", "[$]")}(?!>)(?!\\d)`,
-            "gi"
-          ),
+          new RegExp(`(?<![A-Z])(?<!<)${ref.replace("$", "[$]")}(?!>)(?!\\d)`, "gi"),
           `<${targetRef}>`
         );
       });
@@ -285,15 +265,11 @@ class Spreadsheet extends React.Component {
   copyRangeToRange(fromRange, toRange, cells) {
     const fromRangeCells = Util.expandRange(fromRange).flat();
     const toRangeCells = Util.expandRange(toRange).flat();
-    const commonCells = new Set(fromRangeCells).intersection(
-      new Set(toRangeCells)
-    );
+    const commonCells = new Set(fromRangeCells).intersection(new Set(toRangeCells));
 
     if (commonCells.size > 0) {
       /* eslint-disable no-throw-literal */
-      throw `copyRangeToRange: ranges cannot overlap (cells in common: ${[
-        ...commonCells
-      ]})`;
+      throw `copyRangeToRange: ranges cannot overlap (cells in common: ${[...commonCells]})`;
       /* eslint-enable no-throw-literal */
     }
 
@@ -312,20 +288,12 @@ class Spreadsheet extends React.Component {
       }
     };
     const rowsWidth = {
-      fromRange:
-        refsCoords.fromRange.bottomRight.row -
-        refsCoords.fromRange.topLeft.row +
-        1,
-      toRange:
-        refsCoords.toRange.bottomRight.row - refsCoords.toRange.topLeft.row + 1
+      fromRange: refsCoords.fromRange.bottomRight.row - refsCoords.fromRange.topLeft.row + 1,
+      toRange: refsCoords.toRange.bottomRight.row - refsCoords.toRange.topLeft.row + 1
     };
     const colsWidth = {
-      fromRange:
-        refsCoords.fromRange.bottomRight.col -
-        refsCoords.fromRange.topLeft.col +
-        1,
-      toRange:
-        refsCoords.toRange.bottomRight.col - refsCoords.toRange.topLeft.col + 1
+      fromRange: refsCoords.fromRange.bottomRight.col - refsCoords.fromRange.topLeft.col + 1,
+      toRange: refsCoords.toRange.bottomRight.col - refsCoords.toRange.topLeft.col + 1
     };
 
     for (
@@ -344,8 +312,7 @@ class Spreadsheet extends React.Component {
         };
 
         if (
-          targetRangeBottomRightCoords.row >
-            refsCoords.toRange.bottomRight.row ||
+          targetRangeBottomRightCoords.row > refsCoords.toRange.bottomRight.row ||
           targetRangeBottomRightCoords.col > refsCoords.toRange.bottomRight.col
         ) {
           break; // Target shape wouldn't fit.
@@ -371,20 +338,11 @@ class Spreadsheet extends React.Component {
       bottomRight: Util.rowColFromRef(fromRangeRefs[1])
     };
     const fromRangeWidths = {
-      rows:
-        fromRangeRefsCoords.bottomRight.row -
-        fromRangeRefsCoords.topLeft.row +
-        1,
-      cols:
-        fromRangeRefsCoords.bottomRight.col -
-        fromRangeRefsCoords.topLeft.col +
-        1
+      rows: fromRangeRefsCoords.bottomRight.row - fromRangeRefsCoords.topLeft.row + 1,
+      cols: fromRangeRefsCoords.bottomRight.col - fromRangeRefsCoords.topLeft.col + 1
     };
 
-    const toRange = [
-      toRef,
-      Util.addRowsColsToRef(toRef, fromRangeWidths.rows, fromRangeWidths.cols)
-    ].join(":");
+    const toRange = [toRef, Util.addRowsColsToRef(toRef, fromRangeWidths.rows, fromRangeWidths.cols)].join(":");
 
     this.copyRangeToRange(fromRange, toRange, cells);
   }
@@ -407,12 +365,7 @@ class Spreadsheet extends React.Component {
         ? { row: refOrRowCol[0], col: refOrRowCol[1] }
         : Util.rowColFromRef(refOrRowCol);
 
-    return (
-      row < this.rows(cells) &&
-      col < this.cols(cells) &&
-      cells[row] &&
-      cells[row][col] instanceof Cell
-    );
+    return row < this.rows(cells) && col < this.cols(cells) && cells[row] && cells[row][col] instanceof Cell;
   }
 
   cellAt(refOrRowCol, cells) {
@@ -425,8 +378,7 @@ class Spreadsheet extends React.Component {
       if (Spreadsheet.CHECK_ASSERTIONS) {
         if (this.state && this.state.cells) {
           console.assert(cells !== this.state.cells, {
-            message:
-              "cellAt: New cells should never be created directly in the state",
+            message: "cellAt: New cells should never be created directly in the state",
             ref: refOrRowCol
           });
         }
@@ -456,9 +408,7 @@ class Spreadsheet extends React.Component {
       cells: cells
     });
 
-    let formulaRefs = Util.isFormula(newValue)
-      ? Util.findRefsInFormula({ formula: newValue })
-      : new Set();
+    let formulaRefs = Util.isFormula(newValue) ? Util.findRefsInFormula({ formula: newValue }) : new Set();
     let removedRefs = targetCell.observedCells.diff(formulaRefs);
     let addedRefs = formulaRefs.diff(targetCell.observedCells);
 
@@ -515,11 +465,11 @@ class Spreadsheet extends React.Component {
 
       // console.log(`affectedCells: ${[...affectedCells]}`);
 
-      // Clone only previously recalculated, touched or (possibly) affected cells.
+      // Clone only previously recalculated, with references changed or (possibly) affected cells.
       let clonedCells = state.cells.map(row =>
         row.map(cell =>
-          cell.recalculated || cell.touched || affectedCells.has(cell.ref)
-            ? cell.clone({ recalculated: false, touched: false })
+          cell.recalculated || cell.refsChanged || affectedCells.has(cell.ref)
+            ? cell.clone({ recalculated: false, refsChanged: false })
             : cell
         )
       );
@@ -544,10 +494,7 @@ class Spreadsheet extends React.Component {
 
     const dataRows = [...Array(numRows)].map((_, row) => (
       <tr key={row}>
-        <td
-          align="center"
-          style={{ backgroundColor: "lightGray", fontWeight: "bold" }}
-        >
+        <td align="center" style={{ backgroundColor: "lightGray", fontWeight: "bold" }}>
           {Util.rowAsRef(row)}
         </td>
         {[...Array(numCols)].map((_, col) => (
@@ -557,9 +504,7 @@ class Spreadsheet extends React.Component {
               cols={numCols}
               rows={numRows}
               index={col + row * numCols + 1}
-              onBlur={(e, previousValue) =>
-                this.handleBlur(e, row, col, previousValue)
-              }
+              onBlur={(e, previousValue) => this.handleBlur(e, row, col, previousValue)}
               editMode={this.state.editMode}
               inputSize={this.state.cellInputSize}
             />
@@ -570,16 +515,52 @@ class Spreadsheet extends React.Component {
 
     let currentStateInfo;
 
-    if (Spreadsheet.DISPLAY_STATE) {
+    if (this.state.showState) {
       currentStateInfo = (
         <pre>
-          Spreadsheet: {JSON.stringify(this.state, jsonStringifyReplacer, 2)}
+          {JSON.stringify(
+            this.state.stateCellsFilter !== ""
+              ? {
+                  ...this.state,
+                  cells: this.state.cells.flat().filter(cell =>
+                    Util.isRange(this.state.stateCellsFilter)
+                      ? Util.expandRange(this.state.stateCellsFilter.toUpperCase())
+                          .flat()
+                          .includes(cell.ref)
+                      : Util.isRef(this.state.stateCellsFilter)
+                      ? cell.ref === this.state.stateCellsFilter.toUpperCase()
+                      : true
+                  )
+                }
+              : this.state,
+            jsonStringifyReplacer,
+            2
+          )}
         </pre>
       );
     }
 
     return (
       <div>
+        <label>
+          Show state?
+          <input
+            type="checkbox"
+            checked={this.state.showState}
+            onChange={e => this.setState({ showState: e.target.checked })}
+          />
+        </label>
+        <label>
+          &nbsp;&nbsp; Cells Filter:
+          <input
+            type="text"
+            size="10"
+            value={this.state.stateCellsFilter}
+            disabled={!this.state.showState}
+            onChange={e => this.setState({ stateCellsFilter: e.target.value })}
+          />
+        </label>
+        <br />
         <label>
           Hide inputs?
           <input
@@ -597,7 +578,6 @@ class Spreadsheet extends React.Component {
             value={this.state.cellInputSize}
             onChange={e => this.setState({ cellInputSize: e.target.value })}
           />
-          <div id="slider" />
         </label>
         <hr />
         <table id="spreadsheet" border="1" cellSpacing="0" cellPadding="2">

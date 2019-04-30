@@ -79,7 +79,7 @@ class CellVisualizer extends React.Component {
     return (
       <div
         style={{
-          backgroundColor: cell.recalculated ? "yellow" : "white",
+          backgroundColor: cell.invalidFormula ? "red" : (cell.recalculated ? "yellow" : "white"),
           padding: 5
         }}
       >

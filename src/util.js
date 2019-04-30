@@ -11,9 +11,7 @@ class Util {
     return (
       colRef.split("").reduce(function(memo, letter, i) {
         return (
-          memo +
-          (Util.colIndexFromSingleRef(letter) + 1) *
-            Util.ALPHABET_LENGTH ** (colRef.length - i - 1)
+          memo + (Util.colIndexFromSingleRef(letter) + 1) * Util.ALPHABET_LENGTH ** (colRef.length - i - 1)
         );
       }, 0) - 1
     );
@@ -46,12 +44,7 @@ class Util {
   }
 
   static asRef(row, col, absoluteRow = false, absoluteCol = false) {
-    return (
-      (absoluteCol ? "$" : "") +
-      Util.colAsRef(col) +
-      (absoluteRow ? "$" : "") +
-      Util.rowAsRef(row)
-    );
+    return (absoluteCol ? "$" : "") + Util.colAsRef(col) + (absoluteRow ? "$" : "") + Util.rowAsRef(row);
   }
 
   static rowColFromRef(ref) {
@@ -90,19 +83,12 @@ class Util {
     return formula.slice(1);
   }
 
-  static findRefsInFormula({
-    formula,
-    removeAbsoluteMarkers = true,
-    expandRanges = true
-  }) {
+  static findRefsInFormula({ formula, removeAbsoluteMarkers = true, expandRanges = true }) {
     const updatedFormula = expandRanges ? Util.expandRanges(formula) : formula;
 
     return new Set(
-      (updatedFormula.toUpperCase().match(/[$]?[A-Z]+[$]?\d+\b/gi) || []).map(
-        ref =>
-          removeAbsoluteMarkers
-            ? ref.replace(/[$]?([A-Z]+)[$]?(\d+)\b/gi, "$1$2")
-            : ref
+      (updatedFormula.toUpperCase().match(/[$]?[A-Z]+[$]?\d+\b/gi) || []).map(ref =>
+        removeAbsoluteMarkers ? ref.replace(/[$]?([A-Z]+)[$]?(\d+)\b/gi, "$1$2") : ref
       )
     );
   }
@@ -112,18 +98,12 @@ class Util {
   }
 
   static expandRanges(formula) {
-    return formula.replace(
-      /[$]?([A-Z]+)[$]?(\d+):[$]?([A-Z]+)[$]?(\d+)\b/gi,
-      range => JSON.stringify(Util.expandRange(range)).replace(/"/g, "")
+    return formula.replace(/[$]?([A-Z]+)[$]?(\d+):[$]?([A-Z]+)[$]?(\d+)\b/gi, range =>
+      JSON.stringify(Util.expandRange(range)).replace(/"/g, "")
     );
   }
 
-  static replaceRefInFormula(
-    evaluatedValue,
-    ref,
-    value,
-    defaultNumericalValue = 0
-  ) {
+  static replaceRefInFormula(evaluatedValue, ref, value, defaultNumericalValue = 0) {
     let updatedValue;
 
     switch (typeof value) {
@@ -144,12 +124,16 @@ class Util {
 
     return evaluatedValue.replace(
       new RegExp(`\\b${ref}\\b`, "gi"),
-      typeof updatedValue === "string"
-        ? updatedValue
-        : updatedValue < 0
-        ? `(${updatedValue})`
-        : updatedValue
+      typeof updatedValue === "string" ? updatedValue : updatedValue < 0 ? `(${updatedValue})` : updatedValue
     );
+  }
+
+  static isRef(ref) {
+    return !!ref.match(/^[$]?[A-Z]+[$]?\d+$/gi);
+  }
+
+  static isRange(range) {
+    return !!range.match(/^[$]?[A-Z]+[$]?\d+:[$]?[A-Z]+[$]?\d+$/gi);
   }
 
   static expandRange(range) {
@@ -160,18 +144,10 @@ class Util {
     };
     let rows = [];
 
-    for (
-      let row = rangeRefsRowCols.topLeft.row;
-      row <= rangeRefsRowCols.bottomRight.row;
-      row++
-    ) {
+    for (let row = rangeRefsRowCols.topLeft.row; row <= rangeRefsRowCols.bottomRight.row; row++) {
       let cols = [];
 
-      for (
-        let col = rangeRefsRowCols.topLeft.col;
-        col <= rangeRefsRowCols.bottomRight.col;
-        col++
-      ) {
+      for (let col = rangeRefsRowCols.topLeft.col; col <= rangeRefsRowCols.bottomRight.col; col++) {
         cols.push(Util.asRef(row, col));
       }
 
